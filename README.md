@@ -16,6 +16,21 @@ make --version            # GNU Make
 
 ```bash
 git clone <this-repo> && cd claude-code-local
+make setup
+```
+
+This single command will: start Ollama, pull the default model (`qwen3-coder`), create the `claude-sonnet-4-6` alias, and add a `claude-local` shell alias. Override the model with `MODEL=x make setup`.
+
+Once done:
+
+```bash
+claude-local --model sonnet
+```
+
+<details>
+<summary>Manual setup (step-by-step)</summary>
+
+```bash
 make start
 make pull MODEL=qwen3:1.7b
 make alias FROM=qwen3:1.7b TO=claude-sonnet-4-6
@@ -25,6 +40,8 @@ export ANTHROPIC_API_KEY=sk-ant-api03-local-dummy-key-for-ollama-000000000000000
 export CLAUDE_CODE_USE_BEDROCK=0
 claude --model sonnet
 ```
+
+</details>
 
 ## First-time Claude Code setup
 
@@ -71,6 +88,7 @@ Then `claude-local --model sonnet` uses Ollama, while `claude` continues using y
 ## Commands
 
 ```bash
+make setup                                        # One-command setup (first time)
 make start                                        # Start Ollama container
 make stop                                         # Stop everything
 make pull MODEL=qwen3-coder                       # Download a model
