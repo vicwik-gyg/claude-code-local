@@ -1,0 +1,26 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  proxy:
+    build: ./proxy
+    container_name: ollama-proxy
+    ports:
+      - "4000:4000"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - LOG_LEVEL=${PROXY_LOG_LEVEL:-INFO}
+      - LOG_BODIES=${PROXY_LOG_BODIES:-true}
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    profiles: ["proxy"]
+
+volumes:
+  ollama_data:
