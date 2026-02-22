@@ -18,6 +18,7 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://ollama:11434")
 LOG_BODIES = os.getenv("LOG_BODIES", "true").lower() == "true"
 
 app = FastAPI()
+client = httpx.AsyncClient(timeout=300.0)
 
 # Colors for terminal output
 CYAN = "\033[96m"
@@ -68,69 +69,65 @@ async def proxy(request: Request, path: str):
         if k.lower() not in ("host", "transfer-encoding")
     }
 
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        upstream = await client.send(
-            client.build_request(
-                method=request.method,
-                url=url,
-                headers=headers,
-                content=body,
-            ),
-            stream=True,
-        )
+    upstream = await client.send(
+        client.build_request(
+            method=request.method,
+            url=url,
+            headers=headers,
+            content=body,
+        ),
+        stream=True,
+    )
 
-        # Check if streaming response
-        content_type = upstream.headers.get("content-type", "")
-        is_streaming = "text/event-stream" in content_type
+    # Check if streaming response
+    content_type = upstream.headers.get("content-type", "")
+    is_streaming = "text/event-stream" in content_type
 
-        if is_streaming:
-            log(GREEN, "RESPONSE", f"{upstream.status_code} (streaming)")
+    if is_streaming:
+        log(GREEN, "RESPONSE", f"{upstream.status_code} (streaming)")
 
-            async def stream_and_log():
-                async for chunk in upstream.aiter_bytes():
-                    if LOG_BODIES:
-                        text = chunk.decode("utf-8", errors="replace").strip()
-                        for line in text.split("\n"):
-                            if line.startswith("data: ") and line != "data: [DONE]":
-                                try:
-                                    data = json.loads(line[6:])
-                                    # Extract text from various response formats
-                                    if "delta" in data:
-                                        delta = data["delta"]
-                                        if "text" in delta:
-                                            sys.stdout.write(delta["text"])
-                                            sys.stdout.flush()
-                                except json.JSONDecodeError:
-                                    pass
-                    yield chunk
+        async def stream_and_log():
+            async for chunk in upstream.aiter_bytes():
                 if LOG_BODIES:
-                    print(flush=True)  # Newline after streamed text
-                    log(GREEN, "DONE", "stream complete")
+                    text = chunk.decode("utf-8", errors="replace").strip()
+                    for line in text.split("\n"):
+                        if line.startswith("data: ") and line != "data: [DONE]":
+                            try:
+                                data = json.loads(line[6:])
+                                if "delta" in data and "text" in data["delta"]:
+                                    sys.stdout.write(data["delta"]["text"])
+                                    sys.stdout.flush()
+                            except json.JSONDecodeError:
+                                pass
+                yield chunk
+            if LOG_BODIES:
+                print(flush=True)
+                log(GREEN, "DONE", "stream complete")
 
-            return StreamingResponse(
-                stream_and_log(),
-                status_code=upstream.status_code,
-                headers=dict(upstream.headers),
-            )
-        else:
-            response_body = await upstream.aread()
-            log(GREEN, "RESPONSE", f"{upstream.status_code} ({len(response_body)} bytes)")
+        return StreamingResponse(
+            stream_and_log(),
+            status_code=upstream.status_code,
+            headers=dict(upstream.headers),
+        )
+    else:
+        response_body = await upstream.aread()
+        log(GREEN, "RESPONSE", f"{upstream.status_code} ({len(response_body)} bytes)")
 
-            if LOG_BODIES and response_body:
-                try:
-                    parsed = json.loads(response_body)
-                    if "content" in parsed:
-                        for block in parsed["content"]:
-                            if block.get("type") == "text":
-                                preview = block["text"][:200].replace("\n", " ")
-                                log(GREEN, "TEXT", preview)
-                    elif "error" in parsed:
-                        log(RED, "ERROR", json.dumps(parsed["error"]))
-                except (json.JSONDecodeError, AttributeError):
-                    pass
+        if LOG_BODIES and response_body:
+            try:
+                parsed = json.loads(response_body)
+                if "content" in parsed:
+                    for block in parsed["content"]:
+                        if block.get("type") == "text":
+                            preview = block["text"][:200].replace("\n", " ")
+                            log(GREEN, "TEXT", preview)
+                elif "error" in parsed:
+                    log(RED, "ERROR", json.dumps(parsed["error"]))
+            except (json.JSONDecodeError, AttributeError):
+                pass
 
-            return StreamingResponse(
-                iter([response_body]),
-                status_code=upstream.status_code,
-                headers=dict(upstream.headers),
-            )
+        return StreamingResponse(
+            iter([response_body]),
+            status_code=upstream.status_code,
+            headers=dict(upstream.headers),
+        )

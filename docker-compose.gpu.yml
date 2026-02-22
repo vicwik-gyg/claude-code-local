@@ -1,4 +1,4 @@
-# GPU override — use with: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+# NVIDIA GPU override
 services:
   ollama:
     deploy:
