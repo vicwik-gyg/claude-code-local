@@ -1,7 +1,11 @@
-.PHONY: start start-proxy start-gpu stop logs logs-proxy pull models alias shell clean status test
+.PHONY: setup start start-proxy start-gpu stop logs logs-proxy pull models alias shell clean status test
 
 # Default model to pull (override with MODEL=xxx)
 MODEL ?= qwen3-coder
+
+## setup: One-command setup (pull model, create alias, configure shell)
+setup:
+	@bash scripts/setup.sh
 
 ## start: Start Ollama only (default, fastest)
 start:
