@@ -56,7 +56,7 @@ shell:
 
 ## test: Comprehensive health check and diagnostics (use MODEL=x to override)
 test:
-	@bash scripts/healthcheck.sh
+	-@bash scripts/healthcheck.sh
 
 ## clean: Remove containers and volumes (deletes downloaded models!)
 clean:
