@@ -26,6 +26,22 @@ export CLAUDE_CODE_USE_BEDROCK=0
 claude --model sonnet
 ```
 
+## First-time Claude Code setup
+
+When you run `claude` for the first time, it prompts you to choose a subscription method:
+
+1. Claude Max subscription (OAuth login)
+2. Anthropic API key
+3. Enterprise (Bedrock/Vertex)
+
+**Pick option 2** (API key). When prompted, paste the dummy key:
+
+```
+sk-ant-api03-local-dummy-key-for-ollama-000000000000000000000000000000000000
+```
+
+Ollama ignores the API key entirely — it just needs to pass Claude Code's `sk-ant-api03-` format validation. No real Anthropic account or subscription is needed.
+
 ## How it works
 
 Claude Code validates model names client-side — it only accepts Anthropic names like `claude-sonnet-4-6`. The Anthropic SDK appends `/messages` to the base URL (not `/v1/messages`). Three things make local Ollama work:
