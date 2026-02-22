@@ -104,6 +104,30 @@ else
     echo ""
 fi
 
+# ── 7. Seed Claude Code credentials ──────────────────────────────
+section "Claude Code auth bypass"
+CLAUDE_DIR="$HOME/.claude"
+CREDS_FILE="$CLAUDE_DIR/.credentials.json"
+
+if [[ -f "$CREDS_FILE" ]]; then
+    skip "Credentials file exists (${CREDS_FILE})"
+else
+    mkdir -p "$CLAUDE_DIR"
+    cat > "$CREDS_FILE" << CEOF
+{
+  "claudeAiOauth": {
+    "accessToken": "dummy",
+    "refreshToken": "dummy",
+    "expiresAt": 0,
+    "scopes": []
+  }
+}
+CEOF
+    chmod 600 "$CREDS_FILE"
+    ok "Created dummy credentials (${CREDS_FILE})"
+    info "This lets Claude Code skip the login prompt when using Ollama"
+fi
+
 # ── Done ───────────────────────────────────────────────────────────
 section "Done"
 echo -e "  ${GREEN}${BOLD}Setup complete!${RESET}"

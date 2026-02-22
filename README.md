@@ -45,19 +45,15 @@ claude --model sonnet
 
 ## First-time Claude Code setup
 
-When you run `claude` for the first time, it prompts you to choose a subscription method:
+`make setup` automatically creates a dummy credentials file at `~/.claude/.credentials.json` so Claude Code skips the login prompt entirely. No real Anthropic account or subscription is needed.
 
-1. Claude Max subscription (OAuth login)
-2. Anthropic API key
-3. Enterprise (Bedrock/Vertex)
-
-**Pick option 2** (API key). When prompted, paste the dummy key:
+If you're setting up manually (without `make setup`), you'll see a subscription prompt — pick **option 2** (API key) and paste the dummy key:
 
 ```
 sk-ant-api03-local-dummy-key-for-ollama-000000000000000000000000000000000000
 ```
 
-Ollama ignores the API key entirely — it just needs to pass Claude Code's `sk-ant-api03-` format validation. No real Anthropic account or subscription is needed.
+Ollama ignores the API key — it just needs to pass Claude Code's `sk-ant-api03-` format validation.
 
 ## How it works
 
