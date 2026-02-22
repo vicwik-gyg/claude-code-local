@@ -246,6 +246,24 @@ Then: `claude-local --model sonnet`
 
 > **Note:** The `CLAUDE_CODE_USE_BEDROCK=0` override is only needed if you have Bedrock configured in your shell (e.g., from a work setup). The API key must be in Anthropic's format (`sk-ant-api03-...`) but can be any value — Ollama ignores it.
 
+### Switching between local and cloud
+
+The `claude-local` alias overrides env vars only for that invocation. Your regular `claude` command is unaffected and continues to use whatever you had before (Bedrock, direct API, etc.):
+
+```bash
+claude-local --model sonnet    # → local Ollama
+claude --model sonnet          # → real Anthropic API (your normal setup)
+```
+
+If you set the env vars with `export` instead of the alias, unset them to switch back:
+
+```bash
+unset ANTHROPIC_BASE_URL
+unset ANTHROPIC_API_KEY
+unset CLAUDE_CODE_USE_BEDROCK
+claude --model sonnet          # → back to normal
+```
+
 ## Project structure
 
 ```
