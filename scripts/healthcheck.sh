@@ -5,11 +5,12 @@ set -euo pipefail
 # ── Colors & helpers ────────────────────────────────────────────────
 BOLD='\033[1m' DIM='\033[2m' GREEN='\033[32m' YELLOW='\033[33m' RED='\033[31m' CYAN='\033[36m' RESET='\033[0m'
 PASS=0 WARN=0 FAIL=0
+FAILURES=()
 
 section() { echo -e "\n${BOLD}${CYAN}━━━ $1 ━━━${RESET}"; }
 ok()      { echo -e "  ${GREEN}✓${RESET} $1"; PASS=$((PASS + 1)); }
 warn()    { echo -e "  ${YELLOW}⚠${RESET} $1"; WARN=$((WARN + 1)); }
-fail()    { echo -e "  ${RED}✗${RESET} $1"; FAIL=$((FAIL + 1)); }
+fail()    { echo -e "  ${RED}✗${RESET} $1"; FAIL=$((FAIL + 1)); FAILURES+=("$1"); }
 info()    { echo -e "  ${DIM}$1${RESET}"; }
 kv()      { printf "  %-24s %s\n" "$1" "$2"; }
 
@@ -281,7 +282,10 @@ echo -e "  ${GREEN}$PASS passed${RESET}  ${YELLOW}$WARN warnings${RESET}  ${RED}
 if [[ $FAIL -eq 0 ]]; then
     echo -e "\n  ${GREEN}${BOLD}Ready.${RESET} Run: ${BOLD}claude-local --model sonnet${RESET}"
 else
-    echo -e "\n  ${RED}${BOLD}Issues detected — see failures above.${RESET}"
+    echo -e "\n  ${RED}${BOLD}Failed checks:${RESET}"
+    for msg in "${FAILURES[@]}"; do
+        echo -e "    ${RED}✗${RESET} $msg"
+    done
 fi
 echo ""
 exit $FAIL
