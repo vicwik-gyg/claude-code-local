@@ -136,7 +136,7 @@ if [[ -n "$MODEL_LIST" ]]; then
     for alias_pair in "sonnet:claude-sonnet" "haiku:claude-haiku" "opus:claude-opus"; do
         ALIAS="${alias_pair%%:*}"
         PATTERN="${alias_pair##*:}"
-        MATCH=$(echo "$MODEL_LIST" | grep "^${PATTERN}" | head -1 | awk '{print $1}')
+        MATCH=$(echo "$MODEL_LIST" | grep "^${PATTERN}" | head -1 | awk '{print $1}' || true)
         if [[ -n "$MATCH" ]]; then
             ok "$ALIAS → $MATCH"
         else
