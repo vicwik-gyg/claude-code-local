@@ -77,7 +77,7 @@ fi
 
 # ── 6. Shell alias ─────────────────────────────────────────────────
 section "Shell alias"
-ALIAS_LINE="alias claude-local='CLAUDE_CODE_USE_BEDROCK=0 ANTHROPIC_BASE_URL=http://localhost:11434/v1 ANTHROPIC_API_KEY=${DUMMY_KEY} claude'"
+ALIAS_LINE="alias claude-local='CLAUDE_CODE_USE_BEDROCK=0 ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY= claude'"
 
 # Detect shell config file
 SHELL_RC=""
@@ -88,8 +88,15 @@ elif [[ -f "$HOME/.bashrc" ]]; then
 fi
 
 if [[ -n "$SHELL_RC" ]]; then
-    if grep -q "alias claude-local=" "$SHELL_RC" 2>/dev/null; then
+    if grep -qF "$ALIAS_LINE" "$SHELL_RC" 2>/dev/null; then
         skip "claude-local alias in ${SHELL_RC}"
+    elif grep -q "alias claude-local=" "$SHELL_RC" 2>/dev/null; then
+        sed -i.bak '/alias claude-local=/d' "$SHELL_RC"
+        echo "" >> "$SHELL_RC"
+        echo "# claude-code-local" >> "$SHELL_RC"
+        echo "$ALIAS_LINE" >> "$SHELL_RC"
+        ok "Updated claude-local alias in ${SHELL_RC}"
+        info "Run: source ${SHELL_RC}  (or open a new terminal)"
     else
         echo "" >> "$SHELL_RC"
         echo "# claude-code-local" >> "$SHELL_RC"
@@ -102,30 +109,6 @@ else
     echo ""
     echo "    $ALIAS_LINE"
     echo ""
-fi
-
-# ── 7. Seed Claude Code credentials ──────────────────────────────
-section "Claude Code auth bypass"
-CLAUDE_DIR="$HOME/.claude"
-CREDS_FILE="$CLAUDE_DIR/.credentials.json"
-
-if [[ -f "$CREDS_FILE" ]]; then
-    skip "Credentials file exists (${CREDS_FILE})"
-else
-    mkdir -p "$CLAUDE_DIR"
-    cat > "$CREDS_FILE" << CEOF
-{
-  "claudeAiOauth": {
-    "accessToken": "dummy",
-    "refreshToken": "dummy",
-    "expiresAt": 0,
-    "scopes": []
-  }
-}
-CEOF
-    chmod 600 "$CREDS_FILE"
-    ok "Created dummy credentials (${CREDS_FILE})"
-    info "This lets Claude Code skip the login prompt when using Ollama"
 fi
 
 # ── Done ───────────────────────────────────────────────────────────

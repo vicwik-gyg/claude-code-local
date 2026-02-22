@@ -35,8 +35,9 @@ make start
 make pull MODEL=qwen3:1.7b
 make alias FROM=qwen3:1.7b TO=claude-sonnet-4-6
 
-export ANTHROPIC_BASE_URL=http://localhost:11434/v1
-export ANTHROPIC_API_KEY=sk-ant-api03-local-dummy-key-for-ollama-000000000000000000000000000000000000
+export ANTHROPIC_BASE_URL=http://localhost:11434
+export ANTHROPIC_AUTH_TOKEN=ollama
+export ANTHROPIC_API_KEY=
 export CLAUDE_CODE_USE_BEDROCK=0
 claude --model sonnet
 ```
@@ -45,23 +46,17 @@ claude --model sonnet
 
 ## First-time Claude Code setup
 
-`make setup` automatically creates a dummy credentials file at `~/.claude/.credentials.json` so Claude Code skips the login prompt entirely. No real Anthropic account or subscription is needed.
+No Anthropic account or subscription is needed. The `claude-local` alias sets `ANTHROPIC_AUTH_TOKEN=ollama` and empties `ANTHROPIC_API_KEY`, which tells Claude Code to skip its login flow and use the base URL directly.
 
-If you're setting up manually (without `make setup`), you'll see a subscription prompt — pick **option 2** (API key) and paste the dummy key:
-
-```
-sk-ant-api03-local-dummy-key-for-ollama-000000000000000000000000000000000000
-```
-
-Ollama ignores the API key — it just needs to pass Claude Code's `sk-ant-api03-` format validation.
+If Claude Code still prompts for login, run `claude /logout` first to clear any cached credentials, then try again.
 
 ## How it works
 
-Claude Code validates model names client-side — it only accepts Anthropic names like `claude-sonnet-4-6`. The Anthropic SDK appends `/messages` to the base URL (not `/v1/messages`). Three things make local Ollama work:
+Claude Code validates model names client-side — it only accepts Anthropic names like `claude-sonnet-4-6`. Three things make local Ollama work:
 
-1. **`ANTHROPIC_BASE_URL=http://localhost:11434/v1`** — the `/v1` suffix is required so the SDK hits Ollama's `/v1/messages` endpoint
-2. **Model aliasing** — `ollama cp qwen3:1.7b claude-sonnet-4-6` so Ollama responds to the name Claude Code sends
-3. **Dummy API key** — format must be `sk-ant-api03-...` (Claude Code validates this) but the value is ignored by Ollama
+1. **`ANTHROPIC_BASE_URL=http://localhost:11434`** — points Claude Code at local Ollama
+2. **`ANTHROPIC_AUTH_TOKEN=ollama`** + **`ANTHROPIC_API_KEY=`** (empty) — bypasses the login flow entirely
+3. **Model aliasing** — `ollama cp qwen3:1.7b claude-sonnet-4-6` so Ollama responds to the name Claude Code sends
 
 Map local models to different Claude Code tiers:
 
@@ -76,7 +71,7 @@ Map local models to different Claude Code tiers:
 Add to `.bashrc` / `.zshrc`:
 
 ```bash
-alias claude-local='CLAUDE_CODE_USE_BEDROCK=0 ANTHROPIC_BASE_URL=http://localhost:11434/v1 ANTHROPIC_API_KEY=sk-ant-api03-local-dummy-key-for-ollama-000000000000000000000000000000000000 claude'
+alias claude-local='CLAUDE_CODE_USE_BEDROCK=0 ANTHROPIC_BASE_URL=http://localhost:11434 ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY= claude'
 ```
 
 Then `claude-local --model sonnet` uses Ollama, while `claude` continues using your normal setup (Bedrock, direct API, etc.). The alias overrides env vars only for that invocation. `CLAUDE_CODE_USE_BEDROCK=0` is only needed if you have Bedrock configured from a work setup.
@@ -125,38 +120,36 @@ The proxy logs all Claude Code ↔ Ollama traffic with color-coded output:
 
 ```bash
 make start-proxy && make logs-proxy
-export ANTHROPIC_BASE_URL=http://localhost:4000/v1    # point at proxy instead
+export ANTHROPIC_BASE_URL=http://localhost:4000    # point at proxy instead
 ```
 
 ## Troubleshooting
 
 ### "400 The provided model identifier is invalid"
 
-**The error message is misleading.** The problem is almost never the model name.
+**The error message is misleading.** The problem is almost never the model name. Check that your model has an Anthropic alias (`make alias`) and that you're using `--model sonnet` not `--model qwen3:1.7b`.
 
-**Most likely cause: missing `/v1` in `ANTHROPIC_BASE_URL`.** The SDK appends only `/messages`, so without `/v1` it hits `localhost:11434/messages` — a nonexistent Ollama endpoint. Ollama returns a generic error that Claude Code surfaces as "invalid model identifier". We confirmed this by running an HTTP listener — no request arrived at all with the wrong URL.
+### Login prompt keeps appearing
+
+Claude Code may have cached credentials from a previous login. Clear them:
 
 ```bash
-# WRONG — hits /messages (doesn't exist)
-export ANTHROPIC_BASE_URL=http://localhost:11434
-
-# RIGHT — hits /v1/messages (Ollama's Anthropic endpoint)
-export ANTHROPIC_BASE_URL=http://localhost:11434/v1
+claude /logout
 ```
 
-If the URL is correct, check that your model has an Anthropic alias (`make alias`) and that you're using `--model sonnet` not `--model qwen3:1.7b`.
+Then ensure your alias uses the correct env vars — `ANTHROPIC_AUTH_TOKEN=ollama` and `ANTHROPIC_API_KEY=` (empty). The empty API key is critical; if it's set to any value, Claude Code tries to authenticate with Anthropic.
 
-### "403 Invalid API Key"
+### Auth env var conflicts
 
 Multiple auth env vars can conflict silently:
 
-| Env var | Effect |
-|---------|--------|
-| `ANTHROPIC_API_KEY` | What we need (format: `sk-ant-api03-...`) |
-| `ANTHROPIC_AUTH_TOKEN` | **Conflicts** if both set — `unset` it |
-| `CLAUDE_CODE_USE_BEDROCK=1` | **Ignores** `ANTHROPIC_BASE_URL` entirely — set to `0` |
+| Env var | Required value | Effect if wrong |
+|---------|---------------|-----------------|
+| `ANTHROPIC_AUTH_TOKEN` | `ollama` | Must be set — this is what bypasses login |
+| `ANTHROPIC_API_KEY` | empty | If set, Claude Code tries to authenticate with Anthropic |
+| `CLAUDE_CODE_USE_BEDROCK` | `0` | If `1`, ignores `ANTHROPIC_BASE_URL` entirely |
 
-Common cause: a work setup left `CLAUDE_CODE_USE_BEDROCK=1` or `ANTHROPIC_AUTH_TOKEN` in your shell profile.
+Common cause: a work setup left `CLAUDE_CODE_USE_BEDROCK=1` or `ANTHROPIC_API_KEY` in your shell profile.
 
 ### Responses seem too good for a local model
 
